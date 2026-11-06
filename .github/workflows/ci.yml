@@ -1,0 +1,61 @@
+
+name: Module 5 Part 3 CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Python Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:6
+        ports:
+          - 27017:27017
+
+    env:
+      MONGO_URI: mongodb://localhost:27017/bank_app
+      SECRET_KEY: github-actions-test-secret
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest
+
+      - name: Run backend tests
+        run: python -m pytest backend/tests -v
+
+  transactions-check:
+    name: Node.js Transactions Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node.js dependencies
+        working-directory: transactions/src
+        run: npm install
+
+      - name: Check JavaScript syntax
+        run: node --check transactions/src/app.js
