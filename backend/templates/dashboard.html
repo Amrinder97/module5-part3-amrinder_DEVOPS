@@ -1,0 +1,106 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pixel River Financial Bank Services</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css">
+</head>
+
+<body class="container mt-5">
+
+  <h1>Pixel River Financial Bank Services</h1>
+  <h2>Welcome, {{ user.first_name }} {{ user.last_name }}</h2>
+  <p>Your monthly transaction report is also available below.</p>
+
+  <p>Account Balance: ${{ '%.2f'|format(user.balance) }}</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form action="/api/deposit" method="POST" class="mb-3">
+    <div class="mb-3">
+      <label for="depositAmount" class="form-label">Deposit Amount</label>
+      <input type="number" step="0.01" class="form-control"
+             id="depositAmount" name="amount" required>
+    </div>
+    <button type="submit" class="btn btn-success">Deposit</button>
+  </form>
+
+  <form action="/api/withdraw" method="POST" class="mb-3">
+    <div class="mb-3">
+      <label for="withdrawAmount" class="form-label">Withdraw Amount</label>
+      <input type="number" step="0.01" class="form-control"
+             id="withdrawAmount" name="amount" required>
+    </div>
+    <button type="submit" class="btn btn-danger">Withdraw</button>
+  </form>
+
+  <!-- Transactions Section -->
+  <div class="mt-4">
+    <button id="viewTransactions" class="btn btn-info mb-3">
+      View Transactions
+    </button>
+
+    <div id="transactionsContainer" style="display:none;">
+      <h3>Your Monthly Transactions</h3>
+      <div id="transactionsList"></div>
+    </div>
+  </div>
+
+  <a href="/api/logout" class="btn btn-secondary mt-3">Logout</a>
+
+  <script>
+    document.getElementById('viewTransactions').addEventListener('click', async () => {
+      const container = document.getElementById('transactionsContainer');
+      const list = document.getElementById('transactionsList');
+
+      list.innerHTML = '';
+
+      try {
+       const res = await fetch('/api/transactions/{{ user._id }}');
+
+        if (!res.ok) {
+          throw new Error(await res.text());
+        }
+
+        const data = await res.json();
+
+        if (data.length === 0) {
+          list.innerHTML = '<p>No transactions found</p>';
+        } else {
+          data.forEach(group => {
+            const monthDiv = document.createElement('div');
+
+            const heading = document.createElement('h4');
+            heading.textContent = group.month;
+            monthDiv.appendChild(heading);
+
+            group.transactions.forEach(t => {
+              const p = document.createElement('p');
+              p.textContent =
+                `${new Date(t.date).toLocaleString()}: ${t.type} $${Number(t.amount).toFixed(2)}`;
+              monthDiv.appendChild(p);
+            });
+
+            list.appendChild(monthDiv);
+          });
+        }
+
+      } catch (err) {
+        console.error('Error fetching transactions:', err);
+        list.innerHTML =
+          '<div class="alert alert-danger">Failed to load transactions</div>';
+      }
+
+      container.style.display = 'block';
+    });
+  </script>
+
+</body>
+</html>
